@@ -1,0 +1,199 @@
+import uuid
+from abc import ABC, abstractmethod
+from functools import wraps
+
+import numpy as np
+
+from sklearn.base import BaseEstimator
+
+from supervised.utils.common import construct_learner_name
+from supervised.utils.importance import PermutationImportance
+from supervised.utils.shap import PlotSHAP
+
+
+class BaseAlgorithm(BaseEstimator, ABC):
+    """
+    This is an abstract class.
+    All algorithms inherit from BaseAlgorithm.
+    """
+
+    algorithm_name = "Unknown"
+    algorithm_short_name = "Unknown"
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Also protect direct learner calls, inherited predictors and reloads.
+        # On unaffected platforms this is a cheap no-op, with no Torch import.
+        def guarded(method):
+            @wraps(method)
+            def call(self, *args, **kwargs):
+                from supervised.utils.native_compatibility import (
+                    require_algorithm,
+                )
+                require_algorithm(
+                    self.algorithm_short_name,
+                    f"{self.algorithm_short_name}.{method.__name__}",
+                )
+                return method(self, *args, **kwargs)
+            return call
+
+        for name in ("fit", "predict", "predict_proba", "load", "save", "interpret"):
+            method = cls.__dict__.get(name)
+            if method is not None:
+                setattr(cls, name, guarded(method))
+
+    def __init__(self, params):
+        self.params = params
+        self.stop_training = False
+        self.library_version = None
+        self.model = None
+        self.uid = params.get("uid", str(uuid.uuid4()))
+        self.ml_task = params.get("ml_task")
+        self.model_file_path = None
+        self.name = "amazing_learner"
+
+    def set_learner_name(self, fold, repeat, repeats):
+        self.name = construct_learner_name(fold, repeat, repeats)
+
+    @abstractmethod
+    def is_fitted(self):
+        """Return whether the model is loaded and ready for prediction."""
+        raise NotImplementedError
+
+    def reload(self):
+        if not self.is_fitted() and self.model_file_path is not None:
+            self.load(self.model_file_path)
+
+    def unload(self):
+        """Release the runtime model, retaining metadata for a later reload."""
+        self.model = None
+
+    @abstractmethod
+    def fit(
+        self,
+        X,
+        y,
+        sample_weight=None,
+        X_validation=None,
+        y_validation=None,
+        sample_weight_validation=None,
+        log_to_file=None,
+        max_time=None,
+    ):
+        """Train the model using the supplied training and validation data."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def predict(self, X):
+        """Return predictions in the format expected for the model's task."""
+        raise NotImplementedError
+
+    # needed for feature importance
+    def predict_proba(self, X):
+        y = self.predict(X)
+        if "num_class" in self.params and self.params["num_class"] > 2:
+            return y
+        return np.column_stack((1 - y, y))
+
+    def update(self, update_params):
+        """Optional hook for updating parameters between training iterations."""
+        pass
+
+    @abstractmethod
+    def copy(self):
+        """Return an independent copy, including the current model state."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def save(self, model_file_path):
+        """Save the model state to the supplied path."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def load(self, model_file_path):
+        """Load the model state from the supplied path."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def file_extension(self):
+        """Return the model artifact extension without a leading dot."""
+        raise NotImplementedError
+
+    def get_fname(self):
+        return f"{self.name}.{self.file_extension()}"
+
+    def interpret(
+        self,
+        X_train,
+        y_train,
+        X_validation,
+        y_validation,
+        model_file_path,
+        learner_name,
+        target_name=None,
+        class_names=None,
+        metric_name=None,
+        ml_task=None,
+        explain_level=2,
+    ):
+        from supervised.utils.native_compatibility import require_algorithm
+
+        require_algorithm(self.algorithm_short_name, "model interpretation")
+        # do not produce feature importance for Baseline
+        if self.algorithm_short_name == "Baseline":
+            return
+        if explain_level > 0:
+            PermutationImportance.compute_and_plot(
+                self,
+                X_validation,
+                y_validation,
+                model_file_path,
+                learner_name,
+                metric_name,
+                ml_task,
+                self.params.get("n_jobs", -1),
+            )
+        if explain_level > 1:
+            PlotSHAP.compute(
+                self,
+                X_train,
+                y_train,
+                X_validation,
+                y_validation,
+                model_file_path,
+                learner_name,
+                class_names,
+                ml_task,
+            )
+
+    def get_metric_name(self):
+        return None
+
+    def get_params(self):
+        params = {
+            "library_version": self.library_version,
+            "algorithm_name": self.algorithm_name,
+            "algorithm_short_name": self.algorithm_short_name,
+            "uid": self.uid,
+            "params": self.params,
+            "name": self.name,
+        }
+        if hasattr(self, "best_ntree_limit") and self.best_ntree_limit is not None:
+            params["best_ntree_limit"] = self.best_ntree_limit
+        return params
+
+    def set_params(self, json_desc, learner_path):
+        self.library_version = json_desc.get("library_version", self.library_version)
+        self.algorithm_name = json_desc.get("algorithm_name", self.algorithm_name)
+        self.algorithm_short_name = json_desc.get(
+            "algorithm_short_name", self.algorithm_short_name
+        )
+        self.uid = json_desc.get("uid", self.uid)
+        self.params = json_desc.get("params", self.params)
+        self.name = json_desc.get("name", self.name)
+        self.model_file_path = learner_path
+
+        if hasattr(self, "best_ntree_limit"):
+            self.best_ntree_limit = json_desc.get(
+                "best_ntree_limit", self.best_ntree_limit
+            )

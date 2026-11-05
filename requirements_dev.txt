@@ -1,0 +1,9 @@
+pytest>=9.0.3
+black
+pytest-cov
+psutil>=5.0
+coveralls
+mkdocs-material[imaging]>=9.5.32
+Pygments>=2.20.0
+mkdocstrings
+mkdocstrings-python

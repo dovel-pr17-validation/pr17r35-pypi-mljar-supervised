@@ -1,0 +1,115 @@
+site_name: MLJAR AutoML
+site_url: https://supervised.mljar.com/
+site_description: Automated machine learning for Python with model training, explainability, fairness-aware learning, and report generation for tabular data.
+site_author: MLJAR
+docs_dir: docs
+site_dir: site
+
+theme:
+    name: material
+    favicon: images/brand/favicon.svg
+    logo: images/brand/mljar-logo.webp
+    icon:
+        repo: fontawesome/brands/github-square
+    palette:
+        primary: custom
+        accent: custom
+    font:
+        text: Inter
+        code: Roboto Mono
+
+
+repo_url: https://github.com/mljar/mljar-supervised
+repo_name: mljar-supervised
+
+markdown_extensions:
+    - md_in_html
+    - pymdownx.highlight:
+        use_pygments: true
+    - toc:
+        permalink: false
+        anchorlink: true
+    - codehilite
+    - pymdownx.tabbed
+    - pymdownx.superfences
+    - admonition
+    - pymdownx.details
+    - pymdownx.emoji:
+        emoji_index: !!python/name:material.extensions.emoji.twemoji
+        emoji_generator: !!python/name:material.extensions.emoji.to_svg
+    - attr_list
+    - def_list
+    - pymdownx.tasklist:
+        custom_checkbox: true
+    - footnotes
+
+plugins:
+  - search
+  - social:
+      cards_layout: default
+      cards_layout_options:
+        background_color: "#004666"
+        color: "#ffffff"
+  - mkdocstrings
+
+extra:
+    social:
+        - icon: fontawesome/brands/github
+          link: https://github.com/mljar/mljar-supervised
+        - icon: fontawesome/brands/twitter
+          link: https://twitter.com/MLJARofficial
+        - icon: fontawesome/regular/lightbulb
+          link: https://mljar.com
+
+edit_uri: edit/master/docs/docs/
+
+copyright: Copyright © MLJAR, Inc.
+
+extra_css:
+  - stylesheets/extra.css?v=docs-20261027-10
+
+extra_javascript:
+  - javascripts/training-console.js?v=console-20261027-2
+
+nav:
+  - Get started: index.md
+  - Installation: install.md
+  - Examples and tutorials:
+    - Overview: examples.md
+    - Predict a number from a CSV: tutorials/concrete-strength.md
+    - Predict customer churn: tutorials/customer-churn.md
+    - Train with IP addresses: tutorials/ip-addresses.md
+    - Share a classification app: tutorials/app-classification.md
+    - Share a regression app: tutorials/app-regression.md
+    - Classify Titanic passengers: tutorials/titanic.md
+    - Classify synthetic data: tutorials/random.md
+    - Fairness:
+      - Binary classification: tutorials/fairness-binary-classification.md
+      - Multiclass classification: tutorials/fairness-multiclass-classification.md
+      - Regression: tutorials/fairness-regression.md
+  - Using AutoML:
+    - AutoML modes: features/modes.md
+    - Training steps: features/automl.md
+    - Algorithms:
+      - Overview: features/algorithms.md
+      - RealMLP: features/realmlp.md
+      - TabM mini: features/tabm.md
+      - Kumo and TabICLv2: features/sdm.md
+    - Preprocessing: features/preprocessing.md
+    - Feature engineering:
+      - Feature selection: features/features_selection.md
+      - Feature discovery: features/feature_discovery.md
+      - Golden features: features/golden_features.md
+    - Validation: features/custom-validation.md
+    - Custom metrics: features/custom-eval-metric.md
+    - Stacking and ensembles: features/stacking-ensemble.md
+    - Save and load models: features/save-and-load-models.md
+  - Results and deployment:
+    - Reports: features/reports.md
+    - Explainability: features/explain.md
+    - Prediction apps: features/apps.md
+  - API reference: api.md
+  - Help and community:
+    - Get help: get_help.md
+    - Contributing: contributing.md
+    - Credits: acknowledgments.md

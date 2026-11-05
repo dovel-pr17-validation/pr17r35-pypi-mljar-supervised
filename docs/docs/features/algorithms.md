@@ -1,0 +1,655 @@
+---
+title: "Supported Machine Learning Algorithms"
+description: "Explore MLJAR AutoML algorithms and configure fixed model parameters, including tree models, neural networks, and tabular foundation models."
+---
+# Algorithms
+
+MLJAR AutoML compares machine learning algorithms for tabular classification
+and regression. Use the `algorithms` argument to choose models and `custom_params`
+to fix supported settings. Your [AutoML mode](modes.md) and installed optional
+dependencies determine which algorithms are available.
+
+With `algorithms="auto"` (the default), Compete mode skips the scikit-learn
+`"Neural Network"` algorithm when RealMLP or TabM is enabled. It keeps
+`"Neural Network"` if neither is available after dependency, sample-weight, and
+native compatibility checks. Explicit algorithm lists keep all requested
+algorithms, subject to their usual compatibility requirements; for example,
+`algorithms=["Neural Network", "RealMLP", "TabM"]` selects all three.
+
+## Fixed custom parameters
+
+Use `custom_params` to keep selected parameters fixed during default training,
+random search and hill climbing:
+
+```python
+automl = AutoML(
+    mode="Compete",
+    algorithms=["Random Forest", "RealMLP"],
+    custom_params={
+        "random_forest": {"max_depth": 3},
+        "realmlp": {"device": "auto", "hidden_width": 64},
+    },
+)
+```
+
+Keys in `custom_params` are case-insensitive; spaces, underscores and hyphens are
+ignored. Values are fixed overrides, not lists of search candidates. Existing
+algorithms accept parameters from their registered search/default configuration;
+[RealMLP](realmlp.md), [TabM mini](tabm.md), and [Kumo/TabICLv2](sdm.md)
+also accept their documented training, inference, and memory controls.
+Unknown names and parameters are rejected. AutoML owns the task, metric, class
+count and CPU thread settings. Custom overrides are saved with the run, do not
+select algorithms automatically, and currently cannot be combined with Optuna
+mode. RealMLP requires the optional `[realmlp]` or `[all]` installation extra.
+
+## Baseline
+
+### Classification
+
+The `Baseline` algorithm is using scikit-learn algorithm: [`DummyClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html). It is using strategy `prior` which returns most frequent class as label and class prior for `predict_proba()`.
+
+### Regression
+
+The `Baseline` algorithm is using scikit-learn algorithm: [`DummyRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyRegressor.html). It is using strategy `mean` which returns mean of the target from training data.
+
+!!! note "`Baseline` is not tuned"
+    There will be only one model for algorithm `Baseline`. This algorithm has no hyperparameters.
+
+## Decision Tree
+
+### Classification 
+
+The `Decision Tree` is using scikit-learn [`DecisionTreeClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html).
+
+!!! note "`Decision Tree` hyperparameters for classification"
+    The allowed values of hyperparameters:
+    ```python
+    dt_params = {"criterion": ["gini", "entropy"], 
+                 "max_depth": [2, 3, 4]}
+    ```
+    The default set of hyperparameters:
+    ```python
+    classification_default_params = {"criterion": "gini", "max_depth": 3}
+    ```
+
+### Regression
+
+The `Decision Tree` is using scikit-learn [`DecisionTreeRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeRegressor.html).
+
+!!! note "`Decision Tree` hyperparameters for regression"
+    The allowed values of hyperparameters:
+    ```python
+    dt_params = {
+        "criterion": ["squared_error"],
+        "max_depth": [2, 3, 4]
+    }
+    ```
+    The default set of hyperparameters:
+    ```python
+    regression_default_params = {"criterion": "squared_error", "max_depth": 3}
+    ```
+
+For `Decision Tree` a visualization can be created with `dtreeviz` package (not to have `explain_level > 0`).
+
+## Linear
+
+### Classification
+
+The `Linear` is using scikit-learn [`LogisticRegression`](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html).
+
+!!! note "`Linear` hyperparameters for classification"
+    Thera are no hyperparameters for `Linear` model. The parameters used in `LogisticRegression` initialization: `max_iter=500, tol=5e-4, n_jobs=-1`.
+
+### Regression
+
+The `Linear` is using scikit-learn [`LinearRegression`](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html).
+
+!!! note "`Linear` hyperparameters for regression"
+    Thera are no hyperparameters for `Linear` model. The parameters used in `LinearRegression` initialization: `n_jobs=-1`.
+
+The coefficients are saved in Markdown report if `explain_level > 0`.
+
+## Random Forest
+
+Random Forest and Extra Trees use a fixed number of trees based on the combined
+training and validation row count: **100** below 2,000 rows, **200** for
+2,000–2,999 rows, and **300** for 3,000 rows or more. This applies to classification
+and regression, including Optuna trials. Ordinary cross-validation folds therefore
+use the same count. Without validation data, only training rows are counted.
+Validation scores do not select or trim the forest; training logs record the
+final forest's training and validation scores.
+
+### Classification
+
+The `Random Forest` is using scikit-learn [`RandomForestClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html).
+
+!!! note "`Random Forest` hyperparameters for classification"
+    The allowed hyperparameters values:
+    ```python
+    rf_params = {
+        "criterion": ["gini", "entropy"],
+        "max_features": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "max_depth": [4, 6, 8, 10, 12],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_default_params = {
+        "criterion": "gini",
+        "max_features": 0.6,
+        "min_samples_split": 30,
+        "max_depth": 6,
+    }
+    ```
+
+### Regression
+
+The `Random Forest` is using scikit-learn [`RandomForestRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html).
+
+!!! note "`Random Forest` hyperparameters for regression"
+    The allowed hyperparameters values:
+    ```python
+    regression_rf_params = {
+        "criterion": ["mse"],
+        "max_features": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "max_depth": [4, 6, 8, 10, 12],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    regression_default_params = {
+        "criterion": "mse",
+        "max_features": 0.6,
+        "min_samples_split": 30,
+        "max_depth": 6,
+    }
+    ```
+
+## Extra Trees
+
+Extra Trees uses the same fixed 100/200/300-tree row-count rule as Random Forest
+above, without validation-based tree-count selection.
+
+### Classification
+
+The `Extra Trees` is using scikit-learn [`ExtraTreesClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesClassifier.html).
+
+!!! note "`Extra Trees` hyperparameters for classification"
+    The allowed hyperparameters values:
+    ```python
+    et_params = {
+        "criterion": ["gini", "entropy"],
+        "max_features": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "max_depth": [4, 6, 8, 10, 12],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_default_params = {
+        "criterion": "gini",
+        "max_features": 0.6,
+        "min_samples_split": 30,
+        "max_depth": 6,
+    }
+    ```
+
+### Regression
+
+The `Extra Trees` is using scikit-learn [`ExtraTreesRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html).
+
+!!! note "`Extra Trees` hyperparameters for regression"
+    The allowed hyperparameters values:
+    ```python
+    regression_et_params = {
+        "criterion": ["mse"],
+        "max_features": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "max_depth": [4, 6, 8, 10, 12],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    regression_default_params = {
+        "criterion": "mse",
+        "max_features": 0.6,
+        "min_samples_split": 30,
+        "max_depth": 6,
+    }
+    ```
+
+## Shared boosting-round selection
+
+Starting in 1.4.0b3, cross-validation training for XGBoost, LightGBM and CatBoost
+selects one boosting-round count for all folds of each model configuration.
+This applies to classification and regression, including repeated validation.
+A single validation split and standalone algorithm fits retain their existing
+local early stopping.
+
+Each fold trains continuously with validation checkpoints every **10 rounds**
+and **300 rounds of patience**, subject to round and time limits. Round 1 is
+also a candidate so very short runs and boosters that exhaust possible splits
+can participate. The full booster, including patience rounds, is retained until
+all folds finish. Only checkpoints available in every fold are considered;
+shorter folds are not extended. Selection optimizes the **mean of the fold
+scores**, with the smaller count winning exact ties.
+
+After selection, every fold model is reduced to the selected prefix. OOF
+predictions, validation scores, thresholds, reports and subsequent ensembles
+use that same prefix. `shared_boosting.json` and `shared_boosting_scores.csv`
+record the stopping counts and selection curve. Model reports and the
+leaderboard use the **mean fold score** for selection. The pooled score remains
+in the shared boosting report as a diagnostic.
+
+For all newly trained models, `metric_value` is the arithmetic mean of the
+validation scores from every fold and repeat. Each fold has equal weight;
+sample weights, when provided, apply within each fold. Ensemble selection
+combines candidate predictions separately within each fold, then averages the
+fold scores in the same way. Predictions averaged across repeats are still
+available for stacking and additional reports, but do not determine the
+selection score. Individual fold predictions are saved in
+`predictions_validation_folds.csv` so this also works after reloading.
+
+Counts refer to boosting rounds, which may contain multiple trees for
+multiclass models. XGBoost's zero-based `best_iteration` is stored as the count
+minus one; prediction uses the exclusive endpoint equal to the count.
+
+Training retains one fold's booster and data at a time. Validation checkpoint
+predictions are temporarily stored on disk and removed after completion or
+failure. Their size scales with rows, checkpoints and prediction columns;
+this does not make the underlying training algorithms out-of-core. Training
+curve logs contain checkpoint validation scores; training scores are not
+recomputed at every checkpoint. Shared selection is a validation tuning
+procedure and does not guarantee better performance on unseen data.
+
+## Xgboost
+
+The AutoML is using [`Xgboost`](https://xgboost.readthedocs.io/en/latest/index.html) package.
+
+For binary logistic classification, AutoML checks whether a training fold can
+supply enough Hessian weight for two children at the requested `min_child_weight`.
+Provably impossible configurations are skipped before training. If this bound
+passes, a fitted candidate is still skipped when every trained tree is unsplit
+and every observed root Hessian is below the required weight. These checks use
+training data only, account for sample weights, and do not change parameters.
+Skipped configurations and reasons are recorded in `candidate_skips.json`.
+
+### Binary Classification
+
+!!! note "`Xgboost` hyperparameters for binary classification"
+    The allowed hyperparameters values:
+    ```python
+    xgb_bin_class_params = {
+        "objective": ["binary:logistic"],
+        "eval_metric": ["logloss"],
+        "eta": [0.05, 0.075, 0.1, 0.15],
+        "max_depth": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "min_child_weight": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "subsample": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "colsample_bytree": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_bin_default_params = {
+        "objective": "binary:logistic",
+        "eval_metric": "logloss",
+        "eta": 0.1,
+        "max_depth": 6,
+        "min_child_weight": 1,
+        "subsample": 1.0,
+        "colsample_bytree": 1.0,
+    }
+    ```
+
+### Multi-class Classification
+
+!!! note "`Xgboost` hyperparameters for multi-class classification"
+    The allowed hyperparameters values:
+    ```python
+    xgb_multi_class_params = {
+        "objective": ["multi:softprob"],
+        "eval_metric": ["mlogloss"],
+        "eta": [0.05, 0.075, 0.1, 0.15],
+        "max_depth": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "min_child_weight": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "subsample": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "colsample_bytree": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+    }
+    
+    ```
+    The default hyperparameters:
+    ```python       
+    classification_multi_default_params = {
+        "objective": "multi:softprob",
+        "eval_metric": "mlogloss",
+        "eta": 0.1,
+        "max_depth": 6,
+        "min_child_weight": 1,
+        "subsample": 1.0,
+        "colsample_bytree": 1.0,
+    }
+    ```
+
+### Regression
+
+!!! note "`Xgboost` hyperparameters for regression"
+    The allowed hyperparameters values:
+    ```python
+    xgb_regression_params = {
+        "objective": ["reg:squarederror"],
+        "eval_metric": ["rmse"],
+        "eta": [0.05, 0.075, 0.1, 0.15],
+        "max_depth": [1, 2, 3, 4],
+        "min_child_weight": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "subsample": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        "colsample_bytree": [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+    }
+    
+    ```
+    The default hyperparameters:
+    ```python       
+    regression_default_params = {
+        "objective": "reg:squarederror",
+        "eval_metric": "rmse",
+        "eta": 0.1,
+        "max_depth": 4,
+        "min_child_weight": 1,
+        "subsample": 1.0,
+        "colsample_bytree": 1.0,
+    }
+    ```
+
+## CatBoost
+
+The AutoML is using [`CatBoost`](https://catboost.ai/) package.
+
+### Classification
+
+!!! note "`CatBoost` hyperparameters for classification"
+    The allowed hyperparameters values:
+    ```python
+    classification_params = {
+        "learning_rate": [0.05, 0.1, 0.2],
+        "depth": [2, 3, 4, 5, 6],
+        "rsm": [0.7, 0.8, 0.9, 1],  # random subspace method
+        "subsample": [0.7, 0.8, 0.9, 1],  # random subspace method
+        "min_data_in_leaf": [1, 5, 10, 15, 20, 30, 50],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_default_params = {
+        "learning_rate": 0.1,
+        "depth": 6,
+        "rsm": 0.9,
+        "subsample": 1.0,
+        "min_data_in_leaf": 15,
+    }
+    ```
+
+- for binary classification `loss_function=Logloss`,
+- for mutliclass classification `loss_function=MultiClass`.
+
+## Regression
+
+!!! note "`CatBoost` hyperparameters for regression"
+    The allowed hyperparameters values:
+    ```python
+    regression_params = {
+        "learning_rate": [0.05, 0.1, 0.2],
+        "depth": [2, 3, 4, 5, 6],
+        "rsm": [0.7, 0.8, 0.9, 1],  # random subspace method
+        "subsample": [0.7, 0.8, 0.9, 1],  # random subspace method
+        "min_data_in_leaf": [1, 5, 10, 15, 20, 30, 50],
+    }
+    ```
+    The default hyperparameters:
+    ```python       
+    regression_default_params = {
+        "learning_rate": 0.1,
+        "depth": 6,
+        "rsm": 0.9,
+        "subsample": 1.0,
+        "min_data_in_leaf": 15,
+    }
+    ```
+
+For regression `loss_function=RMSE`.
+
+## LightGBM
+
+
+The AutoML is using [`LightGBM`](https://lightgbm.readthedocs.io/en/latest/) package.
+
+### Binary Classification
+
+!!! note "`LightGBM` hyperparameters for binary classification"
+    The allowed hyperparameters values:
+    ```python
+    lgbm_bin_params = {
+        "objective": ["binary"],
+        "metric": ["binary_logloss"],
+        "num_leaves": [3, 7, 15, 31],  
+        "learning_rate": [0.05, 0.075, 0.1, 0.15],
+        "feature_fraction": [0.8, 0.9, 1.0],
+        "bagging_fraction": [0.8, 0.9, 1.0],
+        "min_data_in_leaf": [5, 10, 15, 20, 30, 50],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_bin_default_params = {
+        "objective": "binary",
+        "metric": "binary_logloss",
+        "num_leaves": 31,
+        "learning_rate": 0.1,
+        "feature_fraction": 0.9,
+        "bagging_fraction": 0.9,
+        "min_data_in_leaf": 10,
+    }
+    ```
+
+
+### Multi-class Classification
+
+!!! note "`LightGBM` hyperparameters for multi-class classification"
+    The allowed hyperparameters values:
+    ```python
+    lgbm_bin_params = {
+        "objective": ["multiclass"],
+        "metric": ["multi_logloss"],
+        "num_leaves": [3, 7, 15, 31], 
+        "learning_rate": [0.05, 0.075, 0.1, 0.15],
+        "feature_fraction": [0.8, 0.9, 1.0],
+        "bagging_fraction": [0.8, 0.9, 1.0],
+        "min_data_in_leaf": [5, 10, 15, 20, 30, 50],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    classification_multi_default_params = {
+        "objective": "multiclass",
+        "metric": "multi_logloss",
+        "num_leaves": 31,
+        "learning_rate": 0.1,
+        "feature_fraction": 0.9,
+        "bagging_fraction": 0.9,
+        "min_data_in_leaf": 10,
+    }
+    ```
+
+### Regression
+
+!!! note "`LightGBM` hyperparameters for regression"
+    The allowed hyperparameters values:
+    ```python
+    lgbm_bin_params = {
+        "objective": ["regression"],
+        "metric": ["l2"],
+        "num_leaves": [3, 7, 15, 31], 
+        "learning_rate": [0.05, 0.075, 0.1, 0.15],
+        "feature_fraction": [0.8, 0.9, 1.0],
+        "bagging_fraction": [0.8, 0.9, 1.0],
+        "min_data_in_leaf": [5, 10, 15, 20, 30, 50],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    regression_default_params = {
+        "objective": "regression",
+        "metric": "l2",
+        "num_leaves": 15,
+        "learning_rate": 0.1,
+        "feature_fraction": 0.9,
+        "bagging_fraction": 0.9,
+        "min_data_in_leaf": 10,
+    }
+    ```
+
+## Neural Network
+
+For `Neural Network` algorithm the [Keras](https://keras.io) and [Tensorflow](https://www.tensorflow.org/) are used. The same set of hyperparameters are used for all Machine Learning tasks (classification and regression). There is difference in output neurons type and loss function depending on ML task. 
+
+!!! note "`Neural Network` hyperparameters"
+    The allowed hyperparameters values:
+    ```python
+    nn_params = {
+        "dense_layers": [2],
+        "dense_1_size": [16, 32, 64],
+        "dense_2_size": [4, 8, 16, 32],
+        "dropout": [0, 0.1, 0.25],
+        "learning_rate": [0.01, 0.05, 0.08, 0.1],
+        "momentum": [0.85, 0.9, 0.95],
+        "decay": [0.0001, 0.001, 0.01],
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    default_nn_params = {
+        "dense_layers": 2,
+        "dense_1_size": 32,
+        "dense_2_size": 16,
+        "dropout": 0,
+        "learning_rate": 0.05,
+        "momentum": 0.9,
+        "decay": 0.001,
+    }
+    ```
+
+### Binary Classification
+
+- There is single output neuron with `sigmoid` activation.
+- The loss function: `binary_crossentropy`.
+
+### Multi-class Classification
+
+- The number of output neurons is equal to the number of unique classes in the target. The activation in the output layer is `softmax`.
+- The loss function: `categorical_crossentropy`.
+
+### Regression
+
+- There is single output neuron with `linear` activation.
+- The loss function: `mean_squared_error`.
+
+## Nearest Neighbor
+
+The `Nearest Neighbor` algorithm is using scikit-learn: 
+
+- the [`KNeighborsClassifier`](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html) for classification,
+- the [`KNeighborsRegressor`](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsRegressor) for regression.
+
+Training uses at most 1,000 rows by default. Regression selects a reproducible
+random subset. Classification uses stratified sampling when it retains every
+training class. For singleton classes, a small discarded partition, or an omitted
+class, a reproducible fallback keeps at least one row per class and allocates the
+remaining places approximately proportionally. Sampling is without replacement
+and uses only the training fold. AutoML reports a warning when this fallback is used.
+
+If the row cap cannot retain every training class, Nearest Neighbors raises an
+error before fitting. The selected sample must also contain at least `n_neighbors`
+rows. These errors explain which limit needs changing. This handles the internal
+subsampling failure reported in [issue #794](https://github.com/mljar/mljar-supervised/issues/794).
+
+!!! note "`Nearest Neighbor` hyperparameters"
+    The allowed hyperparameters values:
+    ```python
+    knn_params = {
+        "n_neighbors": [3, 5, 7], 
+        "weights": ["uniform", "distance"]
+    }
+    ```
+    The default hyperparameters:
+    ```python
+    default_params = {
+        "n_neighbors": 5, 
+        "weights": "uniform"
+    }
+    ```
+
+## Kumo
+
+`Kumo` uses NVIDIA SDM's pretrained tabular model for binary classification,
+multiclass classification, and regression. It is available only in **Compete**
+mode and supports small, medium, and large checkpoints.
+
+Allowed tuning values:
+
+```python
+kumo_params = {
+    "size": ["small", "medium", "large"],
+    "num_estimators": [4, 8, 16],
+}
+kumo_default_params = {
+    "size": "small",
+    "num_estimators": 8,
+}
+```
+
+An estimator is a transformed view of the context using shared pretrained weights.
+The context contains every training-fold row. Oversized fits are skipped under
+fixed size thresholds and RAM/VRAM checks; rows are never sampled. We do not train new weights
+or tune network depth/learning rate. Fix any tuning parameter through
+`custom_params={"kumo": {"size": "large", "num_estimators": 8}}`.
+
+## TabICLv2
+
+`TabICLv2` is a separate Compete algorithm using SDM's fixed v2 checkpoint.
+It supports the same three tasks and has no small/medium/large setting.
+
+```python
+tabiclv2_params = {
+    "num_estimators": [4, 8, 16],
+}
+tabiclv2_default_params = {
+    "num_estimators": 8,
+}
+```
+
+Both algorithms require Python 3.11+ and an optional extra (`[tfm]`, `[kumo]`,
+`[tabiclv2]`, or `[all]`). In `1.4.0b1`, these extras install the SDM 0.2.1 backend from PyPI.
+Select the exact beta version when installing; see the installation guide. Both algorithms reject sample weights and sparse input. Permutation importance is supported; SHAP is
+not enabled. See [installation](../install.md#kumo-and-tabiclv2-on-cpu-or-nvidia-gpu)
+and the [full model guide](sdm.md) for CPU/GPU behavior, input limits, downloads,
+and portable saves.
+
+## Stacked Algorithm
+
+For classification, stacking is disabled when the smallest observed class has
+**less than 15% of the training rows**, even when `stack_models=True`. Exactly
+15% remains eligible, subject to the other stacking constraints. The rule uses
+unweighted class counts after removing rows with missing targets, and applies
+to binary and multiclass classification. It does not change regression or plain
+ensembling. This is a conservative heuristic, not a guarantee against overfitting.
+
+The stacked algorithms are built with predictions from previous (unstacked) models. The stacked algorithms are reusing hyperparameters of already found good models.
+
+- New stacks use up to five models per algorithm as inputs. Baseline, ensembles, random-feature probes, and already stacked models are excluded.
+- Out-of-fold predictions extend the training data. Stacking uses non-repeated K-fold validation, configured with `validation_strategy={"validation_type": "kfold", "k_folds": 5}`.
+- Eligible stacked learners include boosting models, forests, Neural Network, RealMLP and TabM. Starting in 1.4.0b4, Kumo and TabICLv2 remain eligible as stacking inputs and ensemble members, but are not trained on stacked features. AutoML reuses parent hyperparameters and preprocessing; backend compatibility and remaining time still apply. See [stacking and ensembles](stacking-ensemble.md).
+
+## Ensemble
+
+The `Ensemble` algorithm is implemented based on [Caruana article](http://www.cs.cornell.edu/~alexn/papers/shotgun.icml04.revised.rev2.pdf). The `Ensemble` is using average method, which does a greedy search over all models and try to add (with repetition) a model to the ensemble to improve ensemble's performance. The ensemble performance is computed based on out-of-folds predictions of used models
